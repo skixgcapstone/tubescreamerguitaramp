@@ -51,3 +51,5 @@ systemctl --user enable --now tube-screamer.service
 ```
 
 The service opens the app fullscreen with live input. Stop it with `systemctl --user stop tube-screamer.service` before running a separate audio test. The system service template is an alternative and requires editing its `User` and paths; do not enable both services.
+
+The launcher waits for Codec Zero to expose both input and output and accept a 96 kHz stream before restoring the mixer and opening the app. Each readiness probe runs in a fresh process because PortAudio caches its device list. It tries up to 30 times, with a five-second limit per probe and two seconds between attempts. If readiness or mixer setup fails, the launcher exits and the user service retries. Audio errors are also written to the service log.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 import tkinter as tk
 from collections.abc import Callable
 from pathlib import Path
@@ -592,6 +593,7 @@ class TubeScreamerApp:
             self.audio_error = ""
         except (OSError, RuntimeError, ValueError) as error:
             self.audio_error = str(error)
+            logging.getLogger(__name__).exception("Audio action failed")
 
     def _controls(self) -> ControlState:
         return ControlState(
