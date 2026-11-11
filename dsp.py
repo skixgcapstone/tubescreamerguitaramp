@@ -40,12 +40,15 @@ class Biquad:
     def process(self, block: AudioBlock) -> None:
         if not self.active:
             return
+        b0, b1, b2, a1, a2 = self.b0, self.b1, self.b2, self.a1, self.a2
+        z1, z2 = self.z1, self.z2
         for index in range(block.size):
             sample = float(block[index])
-            output = self.b0 * sample + self.z1
-            self.z1 = self.b1 * sample - self.a1 * output + self.z2
-            self.z2 = self.b2 * sample - self.a2 * output
+            output = b0 * sample + z1
+            z1 = b1 * sample - a1 * output + z2
+            z2 = b2 * sample - a2 * output
             block[index] = output
+        self.z1, self.z2 = z1, z2
 
 
 class DelayLine:
@@ -67,12 +70,18 @@ class DelayLine:
         if wet <= 0:
             return
         offset = self.buffer.size if delay_samples is None else max(1, min(self.buffer.size, delay_samples))
-        for index in range(block.size):
-            delayed = float(self.buffer[(self.position - offset) % self.buffer.size])
-            sample = float(block[index])
-            self.buffer[self.position] = sample + delayed * feedback
-            block[index] = sample + delayed * wet
-            self.position = (self.position + 1) % self.buffer.size
+        index = 0
+        while index < block.size:
+            read = (self.position - offset) % self.buffer.size
+            # Stop at wrap boundaries and before feedback can depend on this chunk.
+            count = min(block.size - index, offset,
+                        self.buffer.size - self.position, self.buffer.size - read)
+            delayed = self.buffer[read:read + count].astype(np.float64)
+            samples = block[index:index + count].astype(np.float64)
+            self.buffer[self.position:self.position + count] = samples + delayed * feedback
+            block[index:index + count] = samples + delayed * wet
+            self.position = (self.position + count) % self.buffer.size
+            index += count
 
 
 class Chorus:
@@ -96,7 +105,7 @@ class Chorus:
             low = int(read)
             fraction = read - low
             high = (low + 1) % self.buffer.size
-            delayed = self.buffer[low] * (1 - fraction) + self.buffer[high] * fraction
+            delayed = float(self.buffer[low]) * (1 - fraction) + float(self.buffer[high]) * fraction
             sample = float(block[index])
             self.buffer[self.position] = sample
             block[index] = sample * (1 - wet * 0.35) + delayed * wet * 0.55
@@ -153,7 +162,7 @@ class Phaser:
                 output = -coefficient * sample + float(self.states[stage])
                 self.states[stage] = sample + coefficient * output
                 sample = output
-            block[index] = dry[index] * (1 - wet * 0.45) + sample * wet * 0.55
+            block[index] = float(dry[index]) * (1 - wet * 0.45) + sample * wet * 0.55
             self.phase = (self.phase + 2 * math.pi * rate_hz / self.sample_rate) % (2 * math.pi)
 
 
@@ -177,7 +186,7 @@ class Flanger:
             read = (self.position - delay_seconds * self.sample_rate) % self.buffer.size
             low = int(read)
             fraction = read - low
-            delayed = self.buffer[low] * (1 - fraction) + self.buffer[(low + 1) % self.buffer.size] * fraction
+            delayed = float(self.buffer[low]) * (1 - fraction) + float(self.buffer[(low + 1) % self.buffer.size]) * fraction
             sample = float(block[index])
             self.buffer[self.position] = sample + delayed * 0.35
             block[index] = sample * (1 - wet * 0.35) + delayed * wet * 0.65

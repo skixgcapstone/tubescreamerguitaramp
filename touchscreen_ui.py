@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import logging
 import tkinter as tk
+import wave
 from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog
@@ -591,8 +592,8 @@ class TubeScreamerApp:
         try:
             action()
             self.audio_error = ""
-        except (OSError, RuntimeError, ValueError) as error:
-            self.audio_error = str(error)
+        except (OSError, RuntimeError, ValueError, EOFError, wave.Error) as error:
+            self.audio_error = str(error) or "The audio file is empty or incomplete."
             logging.getLogger(__name__).exception("Audio action failed")
 
     def _controls(self) -> ControlState:

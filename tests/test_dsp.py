@@ -32,6 +32,27 @@ class RealtimeDSPTests(unittest.TestCase):
         self.assertLessEqual(float(np.max(np.abs(output))), 0.95)
         self.assertGreater(self.dsp.limited_samples, 0)
 
+    def test_all_effects_remain_finite_during_extreme_control_changes(self) -> None:
+        rng = np.random.default_rng(1111)
+        for index in range(200):
+            maximum = index % 2 == 0
+            controls = ControlState(
+                100, 100, 100, 100, 100, 0,
+                (12 if maximum else -12,) * 5,
+                distortion=100, phaser=100, flanger=100,
+                delay_time_ms=700 if maximum else 80,
+                reverb_decay=95 if maximum else 10,
+                chorus_rate=30 if maximum else 1,
+                echo_feedback=80 if maximum else 0,
+                distortion_drive=100 if maximum else 0,
+                phaser_rate=30 if maximum else 1,
+                flanger_depth=100 if maximum else 0,
+            )
+            signal = rng.uniform(-1, 1, 512).astype(np.float32)
+            output = self.dsp.process(signal, controls)
+            self.assertTrue(np.isfinite(output).all())
+            self.assertLessEqual(float(np.max(np.abs(output))), .950001)
+
     def test_neutral_controls_pass_signal_unchanged(self) -> None:
         signal = np.linspace(-0.5, 0.5, 512, dtype=np.float32)
         output = self.dsp.process(signal, self.clean)

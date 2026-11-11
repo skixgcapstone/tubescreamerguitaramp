@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import threading
 import time
 from contextlib import suppress
 from dataclasses import dataclass
@@ -78,6 +79,7 @@ class AudioSnapshot:
 
 class LoopRecorder:
     def __init__(self, sample_rate: int, maximum_seconds: int = 30) -> None:
+        self._lock = threading.Lock()
         self.sample_rate = sample_rate
         self.maximum_samples = sample_rate * maximum_seconds
         self.captured: list[AudioBlock] = []
@@ -96,49 +98,58 @@ class LoopRecorder:
         return "off"
 
     def start(self) -> None:
-        self.captured.clear()
-        self.loop = np.empty(0, dtype=np.float32)
-        self.position = 0
-        self.sample_count = 0
-        self.recording = True
-        self.playing = False
+        with self._lock:
+            self.captured.clear()
+            self.loop = np.empty(0, dtype=np.float32)
+            self.position = 0
+            self.sample_count = 0
+            self.recording = True
+            self.playing = False
 
     def close(self) -> None:
-        if not self.recording or not self.captured:
-            return
-        self.recording = False
-        self.loop = np.concatenate(self.captured)[: self.maximum_samples]
-        self.captured.clear()
-        self.position = 0
-        self.playing = self.loop.size > 0
+        with self._lock:
+            if not self.recording or not self.captured:
+                return
+            self.recording = False
+            self.loop = np.concatenate(self.captured)[: self.maximum_samples]
+            self.captured.clear()
+            self.position = 0
+            self.playing = self.loop.size > 0
 
     def stop(self) -> None:
-        self.captured.clear()
-        self.loop = np.empty(0, dtype=np.float32)
-        self.position = 0
-        self.sample_count = 0
-        self.recording = False
-        self.playing = False
+        with self._lock:
+            self.captured.clear()
+            self.loop = np.empty(0, dtype=np.float32)
+            self.position = 0
+            self.sample_count = 0
+            self.recording = False
+            self.playing = False
 
     def process(self, block: AudioBlock) -> AudioBlock:
-        if self.recording and self.sample_count < self.maximum_samples:
-            remaining = self.maximum_samples - self.sample_count
-            captured = np.asarray(block[:remaining], dtype=np.float32).copy()
-            self.captured.append(captured)
-            self.sample_count += captured.size
-        if not self.playing or not self.loop.size:
+        # Never wait on a UI operation inside the audio callback.
+        if not self._lock.acquire(blocking=False):
             return block
-        end = self.position + block.size
-        if end <= self.loop.size:
-            output = self.loop[self.position:end].copy()
-        elif block.size <= self.loop.size:
-            split = self.loop.size - self.position
-            output = np.concatenate((self.loop[self.position:], self.loop[: block.size - split]))
-        else:
-            indices = (np.arange(block.size) + self.position) % self.loop.size
-            output = self.loop[indices].copy()
-        self.position = end % self.loop.size
-        return output
+        try:
+            if self.recording and self.sample_count < self.maximum_samples:
+                remaining = self.maximum_samples - self.sample_count
+                captured = np.asarray(block[:remaining], dtype=np.float32).copy()
+                self.captured.append(captured)
+                self.sample_count += captured.size
+            if not self.playing or not self.loop.size:
+                return block
+            end = self.position + block.size
+            if end <= self.loop.size:
+                output = self.loop[self.position:end].copy()
+            elif block.size <= self.loop.size:
+                split = self.loop.size - self.position
+                output = np.concatenate((self.loop[self.position:], self.loop[: block.size - split]))
+            else:
+                indices = (np.arange(block.size) + self.position) % self.loop.size
+                output = self.loop[indices].copy()
+            self.position = end % self.loop.size
+            return output
+        finally:
+            self._lock.release()
 
 
 class AudioEngine:
