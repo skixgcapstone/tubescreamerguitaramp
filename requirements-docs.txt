@@ -1,0 +1,4 @@
+# Optional: needed only by docs/build_software_documentation*.py
+python-docx
+Pillow
+reportlab

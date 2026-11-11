@@ -1,0 +1,44 @@
+# Python environments, caches, and build output
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage*
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Machine-specific settings and credentials
+.DS_Store
+._*
+.idea/
+.vscode/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.codex/
+
+# Generated reports, exports, and downloaded dependencies
+/reports/
+/output/
+/tmp/
+/vendor/
+/graphify-out/
+*.log
+*.bak
+*.before-*
+
+# Local recordings, demonstration music, and external reference material
+/demo-audio/
+*.wav
+*.mp3
+*.m4a
+*.flac
+/docs/reference/
+/docs/legal/

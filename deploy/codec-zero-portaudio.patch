@@ -1,0 +1,5 @@
+--- a/src/hostapi/alsa/pa_linux_alsa.c
++++ b/src/hostapi/alsa/pa_linux_alsa.c
+@@ -3001,1 +3001,1 @@
+-        PA_ENSURE( PaUnixThread_New( &stream->thread, &CallbackThreadFunc, stream, 1., stream->rtSched ) );
++        PA_ENSURE( PaUnixThread_New( &stream->thread, &CallbackThreadFunc, stream, 5.0, stream->rtSched ) );

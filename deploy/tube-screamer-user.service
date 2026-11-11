@@ -1,0 +1,17 @@
+[Unit]
+Description=Tube Screamer Amplifier Touchscreen
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/capstoneSoftwareDemo
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=%h/.Xauthority
+ExecStartPre=/bin/sh -c 'until [ -S /tmp/.X11-unix/X0 ]; do sleep 1; done'
+ExecStart=%h/capstoneSoftwareDemo/deploy/run-pi.sh
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=120
+
+[Install]
+WantedBy=default.target
