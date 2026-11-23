@@ -42,3 +42,6 @@ dist/
 *.flac
 /docs/reference/
 /docs/legal/
+
+# Local bench photos may include people and procurement details
+/docs/hardware/tube-pcb/photos/

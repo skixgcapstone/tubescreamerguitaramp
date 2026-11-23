@@ -10,7 +10,16 @@ Get the official mixer profiles:
 git clone https://github.com/raspberrypi/Pi-Codec.git "$HOME/Pi-Codec"
 ```
 
-`run-pi.sh` restores the AUX input / headphone playback profile to ALSA card `Zero`. This profile leaves the green speaker-terminal output muted. The passive-speaker demo used these additional settings, starting at low gain:
+`run-pi.sh` restores the AUX input / headphone playback profile to ALSA card `Zero`. This profile leaves the green speaker-terminal output muted.
+
+After restoring the profile the launcher sets the codec headphone/AUX output to
+57/63 (0 dB), so the powered-speaker demo does not revert to the profile's
+quieter setting at every restart. Set `CODEC_HEADPHONE_VOLUME` to a value from
+0 to 63 in the user service to override it. This setting does not control the
+green passive-speaker terminals. Start the powered speaker at low volume and
+raise its own volume as needed.
+
+The passive-speaker demo used these additional settings, starting at low gain:
 
 ```sh
 amixer -c Zero cset 'name=Lineout Gain Ramping Switch' on
