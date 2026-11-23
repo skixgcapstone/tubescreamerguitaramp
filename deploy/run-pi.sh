@@ -24,6 +24,18 @@ if [ ! -f "$codec_state" ]; then
     exit 1
 fi
 /usr/sbin/alsactl -I -f "$codec_state" restore Zero
+# The official profile restores a quieter headphone/AUX output at each start.
+# Use unity gain for the powered-speaker demo; this is not the speaker terminal.
+# Override with CODEC_HEADPHONE_VOLUME (0..63) in the user service if needed.
+codec_headphone_volume=${CODEC_HEADPHONE_VOLUME:-57}
+case "$codec_headphone_volume" in
+    ''|*[!0-9]*) printf 'Invalid CODEC_HEADPHONE_VOLUME: %s\n' "$codec_headphone_volume" >&2; exit 1 ;;
+esac
+if [ "$codec_headphone_volume" -gt 63 ]; then
+    printf 'CODEC_HEADPHONE_VOLUME must be between 0 and 63.\n' >&2
+    exit 1
+fi
+amixer -c Zero cset 'name=Headphone Volume' "$codec_headphone_volume,$codec_headphone_volume"
 printf '%s\n' "Codec Zero ready; starting live audio."
 
 exec "$project_dir/.venv/bin/python" "$project_dir/main.py" --fullscreen --live-input
